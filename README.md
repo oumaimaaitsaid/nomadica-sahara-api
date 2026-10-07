@@ -1,198 +1,53 @@
-﻿# Nomadica Sahara API
+# Nomadica Sahara API
 
-Nomadica Sahara API is the backend for the Nomadica Sahara platform. It is built with Node.js and Express.js, uses Supabase for authentication and database access, validates request data with Zod, and protects routes with custom JWT middleware.
+Express API for Nomadica Sahara. Neon Postgres stores application data and Better Auth manages partner credentials, sessions, and optional TOTP two-factor authentication. Neon Managed Auth is not used.
 
-## Tech Stack
+## Environment
 
-- Node.js
-- Express.js
-- Supabase Auth
-- Supabase Database
-- Zod
-- JWT-based route protection
-- MVC architecture
-
-## Project Goals
-
-- Manage partner authentication and registration
-- Support email/password login and Google OAuth sign-in
-- Add Two-Factor Authentication (TOTP) for partner accounts
-- Keep the code modular and maintainable using MVC structure
-
-## Folder Structure
-
-```bash
-nomadica-sahara-api/
-├── src/
-│   ├── config/
-│   │   └── supabase.js
-│   ├── controllers/
-│   │   └── authController.js
-│   ├── middlewares/
-│   │   └── authMiddleware.js
-│   ├── routes/
-│   │   └── authRoutes.js
-│   ├── schemas/
-│   │   └── authSchema.js
-│   └── services/
-│       └── authService.js
-├── .env.example
-├── package.json
-├── server.js
-├── tests/
-│   └── authController.test.js
-├── README.md
-└── .gitignore
-```
-
-## Environment Variables
-
-Create a `.env` file in the root directory based on `.env.example`:
+Copy `.env.example` to `.env`, then set the Neon connection string and a private Better Auth secret of at least 32 characters. Generate one with `openssl rand -base64 32`.
 
 ```env
-PORT=3000
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+PORT=5000
+DATABASE_URL=postgresql://neondb_owner:YOUR_PASSWORD@ep-your-endpoint.region.aws.neon.tech/neondb?sslmode=require
+BETTER_AUTH_SECRET=your-random-secret-at-least-32-characters
+BETTER_AUTH_URL=http://localhost:5000
+BETTER_AUTH_TRUSTED_PROXIES=127.0.0.1,::1
 FRONTEND_URL=http://localhost:3000
 ```
 
-### Variable descriptions
+Set `BETTER_AUTH_TRUSTED_PROXIES` to the IP addresses or CIDR ranges of the reverse proxies in front of the API. The frontend forwards the client IP to preserve per-client rate limits.
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `PORT` | Yes | Port used by Express server |
-| `SUPABASE_URL` | Yes | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Yes | Public anon key for client-safe access |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only key for secure backend operations |
-| `FRONTEND_URL` | Yes | Frontend base URL used for OAuth redirects |
+## Database setup
 
-## Installation
-
-1. Clone the repository:
+The existing application tables (`public.users`, `public.roles`) remain in Neon. Create the Better Auth tables by running:
 
 ```bash
-git clone <repo-url>
-cd nomadica-sahara-api
+npm run migrate:auth
 ```
 
-2. Install dependencies:
+The migration creates Better Auth user, account, session, verification, and two-factor records in the same Neon database. It does not add password data to `public.users`.
+
+## Create or reset the partner account
+
+Set `PARTNER_EMAIL`, `PARTNER_PASSWORD`, `PARTNER_FIRST_NAME`, and `PARTNER_LAST_NAME` in `.env`, then run:
+
+```bash
+npm run seed:partner
+```
+
+The seeder creates or updates the Better Auth credential and the matching `public.users` partner profile. It also supports the previous `ADMIN_*` variables for local transition. Public sign-up is disabled.
+
+## Run
 
 ```bash
 npm install
-```
-
-3. Copy `.env.example` to `.env` and fill in the values.
-
-4. Start the server:
-
-```bash
 node server.js
 ```
 
-The server runs on:
+The API listens on `http://localhost:5000`. Better Auth endpoints are mounted at `/API/V1/auth/*`; partner profile is `GET /API/V1/profile`.
 
-```bash
-http://localhost:3000
-```
+## Partner authentication
 
-## API Base URL
+The frontend signs in through `/API/V1/auth/sign-in/email`, verifies an additional code through `/API/V1/auth/two-factor/verify-totp` when enabled, and signs out through `/API/V1/auth/sign-out`. In partner settings, the Security tab can enroll or disable TOTP and displays one-time recovery codes during setup.
 
-All endpoints are available under:
-
-```bash
-/API/V1
-```
-
-## Available Endpoints
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/API/V1/profile` | Returns authenticated user info (JWT required) |
-| `POST` | `/API/V1/login/partner` | Partner login with email and password |
-| `POST` | `/API/V1/register/partner` | Create a new partner account |
-| `GET` | `/API/V1/google` | Generate the Google OAuth login URL |
-| `POST` | `/API/V1/2fa/setup` | Start TOTP setup for partner account |
-| `POST` | `/API/V1/2fa/verify` | Verify a TOTP code |
-
-## Auth Flow
-
-### Partner Registration
-
-Request body:
-
-```json
-{
-  "firstName": "Amina",
-  "lastName": "Sahara",
-  "email": "partner@example.com",
-  "password": "supersecret123"
-}
-```
-
-### Partner Login
-
-Request body:
-
-```json
-{
-  "email": "partner@example.com",
-  "password": "supersecret123"
-}
-```
-
-### Protected Route Example
-
-```http
-GET http://localhost:3000/API/V1/profile
-Authorization: Bearer <jwt_token>
-```
-
-## Google OAuth
-
-The `GET /API/V1/google` route returns a Google OAuth URL generated by Supabase. The frontend can redirect the user to that URL and continue the auth flow via the configured callback route.
-
-## Two-Factor Authentication (2FA)
-
-Partner accounts can enable TOTP-based MFA using Supabase Auth.
-
-### Step 1: Setup 2FA
-
-```http
-POST http://localhost:3000/API/V1/2fa/setup
-Authorization: Bearer <jwt_token>
-```
-
-This returns the TOTP secret and QR code payload or URI.
-
-### Step 2: Verify TOTP
-
-```http
-POST http://localhost:3000/API/V1/2fa/verify
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
-
-{
-  "factorId": "<factor_id>",
-  "code": "123456"
-}
-```
-
-## Validation
-
-This project uses Zod for validation of registration and login payloads, including:
-
-- email format check
-- required first/last name
-- minimum password length
-- malformed request rejection
-
-## Notes
-
-- Supabase Auth handles session creation and JWT generation.
-- Custom middleware checks the bearer token before protected routes run.
-- The codebase follows a simple MVC pattern for clean separation of concerns.
-
-## License
-
-This project is intended for the Nomadica Sahara backend and internal platform use.
+Existing Neon Managed Auth accounts are not imported. Recreate the partner credential with the seeder; the password is hashed using Better Auth and stored in its `account` table.

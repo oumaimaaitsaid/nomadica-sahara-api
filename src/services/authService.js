@@ -1,149 +1,34 @@
-const supabase = require('../config/supabase');
+const { getAuth } = require('../config/betterAuth');
 
-const loginWithEmail = async (email, password) => {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
-    });
-
-    if (error) {
-        return {
-            data: null,
-            error: {
-                code: error.code || 'auth_error',
-                message: error.message,
-            },
-        };
+async function loginWithEmail(req, _res, email, password) {
+    try {
+        const auth = await getAuth();
+        const data = await auth.api.signInEmail({
+            headers: req.headers,
+            body: { email: String(email).trim().toLowerCase(), password },
+        });
+        return { data, error: null };
+    } catch (error) {
+        return { data: null, error: { code: error.status || 'auth_error', message: error.message } };
     }
+}
 
-    return { data, error: null };
-};
-
-const registerPartner = async (firstName, lastName, email, password) => {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-            data: {
-                first_name: firstName.trim(),
-                last_name: lastName.trim(),
-                role: 'partner',
-            },
-        },
-    });
-
-    if (authError) {
-        return {
-            data: null,
-            error: {
-                code: authError.code || 'auth_error',
-                message: authError.message,
-            },
-        };
+async function logoutSession(req) {
+    try {
+        const auth = await getAuth();
+        const data = await auth.api.signOut({ headers: req.headers });
+        return { data, error: null };
+    } catch (error) {
+        return { data: null, error: { code: error.status || 'auth_error', message: error.message } };
     }
+}
 
-    if (!authData?.user) {
-        return {
-            data: null,
-            error: {
-                code: 'missing_user',
-                message: 'Registration succeeded but user data was not returned.',
-            },
-        };
-    }
+async function registerPartner() {
+    return { data: null, error: { code: 'sign_up_disabled', message: 'Partner registration is disabled.' } };
+}
 
-    const { error: dbError } = await supabase.from('users').insert([
-        {
-            id: authData.user.id,
-            email: normalizedEmail,
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            role_id: 1,
-        },
-    ]);
+async function getGoogleAuthUrl() {
+    throw new Error('Social sign-in is not configured for partner accounts.');
+}
 
-    if (dbError) {
-        return {
-            data: null,
-            error: {
-                code: dbError.code || 'db_error',
-                message: dbError.message,
-            },
-        };
-    }
-
-    return { data: authData, error: null };
-};
-
-const getGoogleAuthUrl = async () => {
-    const redirectTo = process.env.FRONTEND_URL
-        ? `${process.env.FRONTEND_URL}/auth/callback`
-        : 'http://localhost:3000/auth/callback';
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo,
-        },
-    });
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    return data;
-};
-
-const enrollPartnerTotp = async () => {
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    const factor = data?.factor ?? data ?? {};
-
-    return {
-        factorId: factor.id,
-        type: factor.type || 'totp',
-        secret: factor.secret || null,
-        qrCode: factor.uri || factor.otpauth_uri || null,
-    };
-};
-
-const challengePartnerTotp = async (factorId) => {
-    const { data, error } = await supabase.auth.mfa.challenge({ factorId });
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    return data;
-};
-
-const verifyPartnerTotp = async ({ factorId, challengeId, code }) => {
-    const { data, error } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId,
-        code,
-    });
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    return data;
-};
-
-module.exports = {
-    loginWithEmail,
-    registerPartner,
-    getGoogleAuthUrl,
-    enrollPartnerTotp,
-    challengePartnerTotp,
-    verifyPartnerTotp,
-};
+module.exports = { loginWithEmail, logoutSession, registerPartner, getGoogleAuthUrl };

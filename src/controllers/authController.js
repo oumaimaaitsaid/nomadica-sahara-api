@@ -1,11 +1,9 @@
 const authService = require('../services/authService');
 const {
     loginWithEmail,
+    logoutSession,
     registerPartner,
     getGoogleAuthUrl,
-    enrollPartnerTotp,
-    challengePartnerTotp,
-    verifyPartnerTotp: verifyPartnerTotpService,
 } = authService;
 
 const { loginPartnerSchema, registerPartnerSchema } = require('../schemas/authSchema');
@@ -13,10 +11,10 @@ const { loginPartnerSchema, registerPartnerSchema } = require('../schemas/authSc
 const loginPartner = async (req, res) => {
     try {
         const validatedData = loginPartnerSchema.parse(req.body);
-        const { data, error } = await loginWithEmail(validatedData.email, validatedData.password);
+        const { data, error } = await loginWithEmail(req, res, validatedData.email, validatedData.password);
 
         if (error) {
-            const statusCode = error.code === 'invalid_credentials' ? 401 : 400;
+            const statusCode = String(error.code).toLowerCase().includes('invalid') ? 401 : 400;
             return res.status(statusCode).json({
                 success: false,
                 message: error.message,
@@ -44,11 +42,21 @@ const loginPartner = async (req, res) => {
     }
 };
 
+const logoutPartner = async (req, res) => {
+    const { error } = await logoutSession(req, res);
+    if (error) {
+        return res.status(400).json({ success: false, message: error.message });
+    }
+    return res.status(200).json({ success: true, message: 'Logout successful' });
+};
+
 const registerNewPartner = async (req, res) => {
     try {
         const validatedData = registerPartnerSchema.parse(req.body);
 
         const { data, error } = await registerPartner(
+            req,
+            res,
             validatedData.firstName,
             validatedData.lastName,
             validatedData.email,
@@ -56,7 +64,7 @@ const registerNewPartner = async (req, res) => {
         );
 
         if (error) {
-            const statusCode = error.code === 'user_already_exists' ? 409 : 400;
+            const statusCode = String(error.code).toLowerCase().includes('already') ? 409 : 400;
             return res.status(statusCode).json({
                 success: false,
                 message: error.message,
@@ -86,7 +94,7 @@ const registerNewPartner = async (req, res) => {
 
 const googleLogin = async (req, res) => {
     try {
-        const data = await getGoogleAuthUrl();
+        const data = await getGoogleAuthUrl(req, res);
 
         return res.status(200).json({
             success: true,
@@ -100,59 +108,9 @@ const googleLogin = async (req, res) => {
     }
 };
 
-const generatePartnerTotp = async (req, res) => {
-    try {
-        const setup = await enrollPartnerTotp();
-
-        return res.status(200).json({
-            success: true,
-            message: 'TOTP setup generated successfully',
-            data: setup,
-        });
-    } catch (error) {
-        return res.status(400).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-const verifyPartnerTotp = async (req, res) => {
-    try {
-        const { factorId, code } = req.body;
-
-        if (!factorId || !code) {
-            return res.status(400).json({
-                success: false,
-                message: 'factorId and code are required',
-            });
-        }
-
-        const challenge = await challengePartnerTotp(factorId);
-
-        const verification = await verifyPartnerTotpService({
-            factorId,
-            challengeId: challenge.id,
-            code,
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: '2FA verification successful',
-            data: verification,
-        });
-    } catch (error) {
-        return res.status(400).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
 module.exports = {
     loginPartner,
+    logoutPartner,
     registerNewPartner,
     googleLogin,
-    generatePartnerTotp,
-    verifyPartnerTotp,
 };

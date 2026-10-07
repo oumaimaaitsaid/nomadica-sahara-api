@@ -1,27 +1,25 @@
 const express = require('express');
-const {
-    loginPartner,
-    registerNewPartner,
-    googleLogin,
-    generatePartnerTotp,
-    verifyPartnerTotp,
-} = require('../controllers/authController');
-const router = express.Router();
-
+const sql = require('../config/neon');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
-router.get('/profile', verifyToken, (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'You have access to this protected route!',
-        user: req.user,
-    });
-});
+const router = express.Router();
 
-router.post('/login/partner', loginPartner);
-router.post('/register/partner', registerNewPartner);
-router.get('/google', googleLogin);
-router.post('/2fa/setup', verifyToken, generatePartnerTotp);
-router.post('/2fa/verify', verifyToken, verifyPartnerTotp);
+router.get('/profile', verifyToken, async (req, res) => {
+    try {
+        const [profile] = await sql`
+            SELECT u.id, u.email, u.first_name, u.last_name, r.name AS role
+            FROM public.users u
+            LEFT JOIN public.roles r ON r.id = u.role_id
+            WHERE u.id = ${req.user.id}
+            LIMIT 1
+        `;
+        if (!profile || profile.role !== 'partner') {
+            return res.status(403).json({ success: false, message: 'Partner access is required.' });
+        }
+        return res.status(200).json({ success: true, user: { ...req.user, ...profile } });
+    } catch {
+        return res.status(500).json({ success: false, message: 'Unable to load profile.' });
+    }
+});
 
 module.exports = router;
