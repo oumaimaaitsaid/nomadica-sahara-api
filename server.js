@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
+const categoryRoutes = require('./src/routes/categoryRoutes');
 const { getAuth } = require('./src/config/betterAuth');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use(express.json());
 
 // Routes mapping
 app.use('/API/V1', authRoutes);
+app.use('/API/V1/categories', categoryRoutes);
 
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;

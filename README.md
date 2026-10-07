@@ -27,6 +27,14 @@ npm run migrate:auth
 
 The migration creates Better Auth user, account, session, verification, and two-factor records in the same Neon database. It does not add password data to `public.users`.
 
+Create the categories table with:
+
+```bash
+npm run migrate:categories
+```
+
+For category images, provision a Neon Object Storage bucket with public read access, then set `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, and `NEON_STORAGE_BUCKET` from the Neon storage credentials. The API accepts one JPEG, PNG, or WebP image up to 5 MB and stores only its object key in Postgres.
+
 ## Create or reset the partner account
 
 Set `PARTNER_EMAIL`, `PARTNER_PASSWORD`, `PARTNER_FIRST_NAME`, and `PARTNER_LAST_NAME` in `.env`, then run:
@@ -49,5 +57,17 @@ The API listens on `http://localhost:5000`. Better Auth endpoints are mounted at
 ## Partner authentication
 
 The frontend signs in through `/API/V1/auth/sign-in/email`, verifies an additional code through `/API/V1/auth/two-factor/verify-totp` when enabled, and signs out through `/API/V1/auth/sign-out`. In partner settings, the Security tab can enroll or disable TOTP and displays one-time recovery codes during setup.
+
+## Partner category API
+
+All category routes require a valid partner session:
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/API/V1/categories` | List categories |
+| `GET` | `/API/V1/categories/:id` | Get one category |
+| `POST` | `/API/V1/categories` | Create category with one `image` file |
+| `PUT` | `/API/V1/categories/:id` | Update category and optionally replace its image |
+| `DELETE` | `/API/V1/categories/:id` | Delete category and its image |
 
 Existing Neon Managed Auth accounts are not imported. Recreate the partner credential with the seeder; the password is hashed using Better Auth and stored in its `account` table.
