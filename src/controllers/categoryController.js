@@ -26,7 +26,7 @@ const toCategory = (row) => ({
     id: row.id,
     name: row.name,
     description: row.description,
-    photo: getObjectUrl(row.image_key),
+    photo: row.image_key ? getObjectUrl(row.image_key) : null,
     is_active: true,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -56,11 +56,11 @@ const createCategory = async (req, res) => {
     const { name, description } = normalizeInput(req.body);
     if (!name || name.length > 120) return res.status(400).json({ success: false, message: 'Category name is required and must be at most 120 characters.' });
     if (description.length > 2000) return res.status(400).json({ success: false, message: 'Description must be at most 2000 characters.' });
-    if (!validImage(req.file)) return res.status(400).json({ success: false, message: 'Upload one valid JPEG, PNG, or WebP image (maximum 5 MB).' });
+    if (req.file && !validImage(req.file)) return res.status(400).json({ success: false, message: 'Upload one valid JPEG, PNG, or WebP image (maximum 5 MB).' });
 
-    const key = imageKey(req.file);
+    const key = req.file ? imageKey(req.file) : null;
     try {
-        await putImage(key, req.file);
+        if (req.file) await putImage(key, req.file);
         const [row] = await sql`
             INSERT INTO public.categories (name, description, image_key)
             VALUES (${name}, ${description}, ${key})
@@ -68,7 +68,7 @@ const createCategory = async (req, res) => {
         `;
         return res.status(201).json({ success: true, category: toCategory(row) });
     } catch (error) {
-        try { await deleteObject(key); } catch { /* Orphan cleanup can be retried from the bucket. */ }
+        if (key) try { await deleteObject(key); } catch { /* Orphan cleanup can be retried from the bucket. */ }
         if (error.code === '23505') return res.status(409).json({ success: false, message: 'A category with this name already exists.' });
         return res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to create category.' });
     }
@@ -88,7 +88,6 @@ const updateCategory = async (req, res) => {
         if (!current) return res.status(404).json({ success: false, message: 'Category not found.' });
         oldKey = current.image_key;
         newKey = req.file ? imageKey(req.file) : req.body.removeImage === 'true' ? null : oldKey;
-        if (!newKey) return res.status(400).json({ success: false, message: 'A category image is required.' });
         if (req.file) await putImage(newKey, req.file);
 
         const [row] = await sql`

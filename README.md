@@ -33,6 +33,13 @@ Create the categories table with:
 npm run migrate:categories
 ```
 
+Bring the public product catalog schema and optional category images under
+migration control with:
+
+```bash
+npm run migrate:catalog
+```
+
 For category images, provision a Neon Object Storage bucket with public read access, then set `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, and `NEON_STORAGE_BUCKET` from the Neon storage credentials. The API accepts one JPEG, PNG, or WebP image up to 5 MB and stores only its object key in Postgres.
 
 ## Create or reset the partner account
@@ -58,16 +65,25 @@ The API listens on `http://localhost:5000`. Better Auth endpoints are mounted at
 
 The frontend signs in through `/API/V1/auth/sign-in/email`, verifies an additional code through `/API/V1/auth/two-factor/verify-totp` when enabled, and signs out through `/API/V1/auth/sign-out`. In partner settings, the Security tab can enroll or disable TOTP and displays one-time recovery codes during setup.
 
-## Partner category API
+## Category API
 
-All category routes require a valid partner session:
+`GET /API/V1/categories` is public for site navigation. Category mutations and
+single-category management routes require a valid partner session. Category
+images are optional on create and update.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/API/V1/categories` | List categories |
+| `GET` | `/API/V1/categories` | Public list of categories |
 | `GET` | `/API/V1/categories/:id` | Get one category |
 | `POST` | `/API/V1/categories` | Create category with one `image` file |
 | `PUT` | `/API/V1/categories/:id` | Update category and optionally replace its image |
 | `DELETE` | `/API/V1/categories/:id` | Delete category and its image |
+
+## Public product API
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/API/V1/products` | List active products |
+| `GET` | `/API/V1/products/:slug` | Get one active product by slug |
 
 Existing Neon Managed Auth accounts are not imported. Recreate the partner credential with the seeder; the password is hashed using Better Auth and stored in its `account` table.

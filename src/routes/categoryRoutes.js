@@ -28,8 +28,10 @@ const parseCategoryImage = (req, res, next) => imageUpload(req, res, (error) => 
     });
 });
 
-router.use(verifyToken, requirePartner);
+// Category names are public catalog data; keep only mutations and individual
+// management endpoints behind partner authentication.
 router.get('/', listCategories);
+router.use(verifyToken, requirePartner);
 router.get('/:id', getCategory);
 router.post('/', parseCategoryImage, createCategory);
 router.put('/:id', parseCategoryImage, updateCategory);
