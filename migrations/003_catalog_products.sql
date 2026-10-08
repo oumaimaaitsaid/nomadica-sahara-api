@@ -42,5 +42,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS pricing_options jsonb;
+
 CREATE INDEX IF NOT EXISTS products_public_listing_idx
     ON public.products (status, type, destination, created_at DESC);

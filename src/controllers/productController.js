@@ -6,7 +6,7 @@ async function listPublicProducts(_req, res) {
             SELECT id, type, title, slug, location, destination, image, gallery, price, currency,
                 rating, review_count, description, duration, duration_hours, date, availability,
                 category, tags, discount, featured, meeting_point, pickup_included, stars,
-                hotel_facilities, vehicle_type, passengers, menu_type, show_included,
+                hotel_facilities, vehicle_type, passengers, menu_type, show_included, pricing_options,
                 treatment_duration, treatment, time, private_group_size, href, itinerary,
                 status, created_at, updated_at
             FROM public.products
@@ -28,7 +28,7 @@ async function getPublicProduct(req, res) {
             SELECT id, type, title, slug, location, destination, image, gallery, price, currency,
                 rating, review_count, description, duration, duration_hours, date, availability,
                 category, tags, discount, featured, meeting_point, pickup_included, stars,
-                hotel_facilities, vehicle_type, passengers, menu_type, show_included,
+                hotel_facilities, vehicle_type, passengers, menu_type, show_included, pricing_options,
                 treatment_duration, treatment, time, private_group_size, href, itinerary,
                 status, created_at, updated_at
             FROM public.products
