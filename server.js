@@ -4,6 +4,7 @@ const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
 const categoryRoutes = require('./src/routes/categoryRoutes');
 const productRoutes = require('./src/routes/productRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
 const { getAuth } = require('./src/config/betterAuth');
 
 const app = express();
@@ -33,6 +34,7 @@ app.use(express.json());
 app.use('/API/V1', authRoutes);
 app.use('/API/V1/categories', categoryRoutes);
 app.use('/API/V1/products', productRoutes);
+app.use('/API/V1/bookings', bookingRoutes);
 
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;

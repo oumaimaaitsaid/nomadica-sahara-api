@@ -40,6 +40,12 @@ migration control with:
 npm run migrate:catalog
 ```
 
+Create the public booking request table with:
+
+```bash
+npm run migrate:bookings
+```
+
 For category images, provision a Neon Object Storage bucket with public read access, then set `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, and `NEON_STORAGE_BUCKET` from the Neon storage credentials. The API accepts one JPEG, PNG, or WebP image up to 5 MB and stores only its object key in Postgres.
 
 ## Create or reset the partner account
@@ -85,6 +91,19 @@ images are optional on create and update.
 | --- | --- | --- |
 | `GET` | `/API/V1/products` | List active products |
 | `GET` | `/API/V1/products/:slug` | Get one active product by slug |
+
+## Booking requests
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/API/V1/bookings` | Validate and save a booking request; pricing is recalculated from the active product |
+| `GET` | `/API/V1/bookings/:reference` | Return a non-sensitive booking confirmation summary |
+| `GET` | `/API/V1/bookings/partner` | List booking requests for authenticated partners |
+| `PATCH` | `/API/V1/bookings/partner/:id/status` | Update a request status as an authenticated partner |
+| `PATCH` | `/API/V1/bookings/partner/:id/payment` | Record manual payment and confirm the request |
+
+Requests are saved with `pending` status. This flow records a booking request;
+it does not confirm availability or collect payment.
 
 Products use `price` for a single-price experience. To expose the existing
 three-tier comparison UI for a product, set its optional `pricing_options`
