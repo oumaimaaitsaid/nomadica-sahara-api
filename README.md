@@ -92,18 +92,38 @@ images are optional on create and update.
 | `GET` | `/API/V1/products` | List active products |
 | `GET` | `/API/V1/products/:slug` | Get one active product by slug |
 
-## Booking requests
+## Booking, Stripe payments, and tickets
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `POST` | `/API/V1/bookings` | Validate and save a booking request; pricing is recalculated from the active product |
-| `GET` | `/API/V1/bookings/:reference` | Return a non-sensitive booking confirmation summary |
+| `POST` | `/API/V1/bookings` | Recalculate the price from the active product, save the booking, and return a Stripe Checkout URL |
+| `GET` | `/API/V1/bookings/:reference` | Return booking and payment status; expose a ticket code only after payment |
 | `GET` | `/API/V1/bookings/partner` | List booking requests for authenticated partners |
-| `PATCH` | `/API/V1/bookings/partner/:id/status` | Update a request status as an authenticated partner |
-| `PATCH` | `/API/V1/bookings/partner/:id/payment` | Record manual payment and confirm the request |
+| `PATCH` | `/API/V1/bookings/partner/:id/status` | Update a booking; cancelling a Stripe-paid booking issues a full refund |
+| `PATCH` | `/API/V1/bookings/partner/:id/payment` | Record an offline payment and email its ticket |
+| `POST` | `/API/V1/stripe/webhook` | Verify Stripe events, confirm paid bookings, generate one ticket per traveler, and email them |
 
-Requests are saved with `pending` status. This flow records a booking request;
-it does not confirm availability or collect payment.
+### Enable checkout
+
+1. Copy the Stripe, Resend, and support email variables from `.env.example` into `.env`.
+   Set a Stripe test secret key, a webhook signing secret, a Resend API key, and a verified `EMAIL_FROM` sender.
+2. Apply the additive database migration with `npm run migrate:booking-payments`.
+3. In Stripe, create a webhook endpoint at `/API/V1/stripe/webhook` for
+   `checkout.session.completed` and `checkout.session.expired`; put its `whsec_...`
+   signing secret in `STRIPE_WEBHOOK_SECRET`. For local development, forward those
+   events to `http://localhost:5000/API/V1/stripe/webhook` with the Stripe CLI.
+4. Set `FRONTEND_URL` to the frontend origin. EUR and MAD amounts come from the
+   active product's `price` and `currency` columns; Stripe charges the full amount
+   when the customer submits the existing booking form.
+
+The verified webhook, rather than the browser redirect, marks a booking paid.
+It creates one unique ticket code per traveler, linked to the same reservation
+reference, and sends the set of tickets to the booking email in Spanish. The confirmation page refreshes while Stripe is completing
+the webhook. Checkout sessions that expire are cancelled. The default cancellation
+policy is a full refund for requests at least 24 hours before the activity, and a
+full refund if the operator cancels. The policy is snapshotted on each booking and
+can be changed per product in `products.cancellation_policy`. Partner cancellation
+of a paid Stripe booking sends a full refund request to Stripe.
 
 Products use the `price` column for the listed experience. Booking requests
 recalculate totals from this price and the product type; comparison tiers are

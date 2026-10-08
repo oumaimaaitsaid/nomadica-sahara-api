@@ -5,6 +5,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const categoryRoutes = require('./src/routes/categoryRoutes');
 const productRoutes = require('./src/routes/productRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
+const { handleStripeWebhook } = require('./src/controllers/bookingController');
 const { getAuth } = require('./src/config/betterAuth');
 
 const app = express();
@@ -27,6 +28,9 @@ app.all('/API/V1/auth/*splat', async (req, res, next) => {
         return next(error);
     }
 });
+
+// Stripe requires the untouched request body to verify webhook signatures.
+app.post('/API/V1/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 app.use(express.json());
 

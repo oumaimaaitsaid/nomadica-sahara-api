@@ -17,6 +17,9 @@ async function getAuth() {
             const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
             const trustedProxies = (process.env.BETTER_AUTH_TRUSTED_PROXIES || '127.0.0.1,::1')
                 .split(',').map((value) => value.trim()).filter(Boolean);
+            // Temporary local dashboard access; the bypass can never disable 2FA in production.
+            const disableTwoFactor = process.env.NODE_ENV !== 'production'
+                && process.env.DISABLE_TWO_FACTOR === 'true';
             const pool = new Pool({ connectionString: process.env.DATABASE_URL });
             return betterAuth({
                 appName: 'Toledano Viajes Partner Portal',
@@ -30,7 +33,7 @@ async function getAuth() {
                     database: { generateId: 'uuid' },
                     ipAddress: { ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'], trustedProxies },
                 },
-                plugins: [twoFactor({ issuer: 'Toledano Viajes' })],
+                plugins: disableTwoFactor ? [] : [twoFactor({ issuer: 'Toledano Viajes' })],
             });
         })().catch((error) => {
             authPromise = undefined;

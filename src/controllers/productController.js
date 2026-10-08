@@ -8,7 +8,7 @@ async function listPublicProducts(_req, res) {
                 category, tags, discount, featured, meeting_point, pickup_included, stars,
                 hotel_facilities, vehicle_type, passengers, menu_type, show_included,
                 treatment_duration, treatment, time, private_group_size, href, itinerary,
-                status, created_at, updated_at
+                cancellation_policy, status, created_at, updated_at
             FROM public.products
             WHERE status = 'active'
             ORDER BY featured DESC, created_at DESC, title ASC
@@ -30,7 +30,7 @@ async function getPublicProduct(req, res) {
                 category, tags, discount, featured, meeting_point, pickup_included, stars,
                 hotel_facilities, vehicle_type, passengers, menu_type, show_included,
                 treatment_duration, treatment, time, private_group_size, href, itinerary,
-                status, created_at, updated_at
+                cancellation_policy, status, created_at, updated_at
             FROM public.products
             WHERE status = 'active' AND lower(slug) = lower(${slug})
             LIMIT 1

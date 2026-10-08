@@ -9,7 +9,8 @@
     "migrate:auth": "node scripts/migrate-auth.js",
     "migrate:categories": "node scripts/migrate-categories.js",
     "migrate:catalog": "node scripts/migrate-catalog.js",
-    "migrate:bookings": "node scripts/migrate-bookings.js"
+    "migrate:bookings": "node scripts/migrate-bookings.js",
+    "migrate:booking-payments": "node scripts/migrate-booking-payments.js"
   },
   "keywords": [],
   "author": "",
