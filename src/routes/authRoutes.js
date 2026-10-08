@@ -16,7 +16,17 @@ router.get('/profile', verifyToken, async (req, res) => {
         if (!profile || profile.role !== 'partner') {
             return res.status(403).json({ success: false, message: 'Partner access is required.' });
         }
-        return res.status(200).json({ success: true, user: { ...req.user, ...profile } });
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim();
+        return res.status(200).json({
+            success: true,
+            user: {
+                ...req.user,
+                ...profile,
+                full_name: fullName || req.user.name || '',
+                phone: req.user.phone || null,
+                bio: req.user.bio || null,
+            },
+        });
     } catch {
         return res.status(500).json({ success: false, message: 'Unable to load profile.' });
     }
