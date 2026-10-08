@@ -17,8 +17,6 @@ FRONTEND_URL=http://localhost:3000
 
 Set `BETTER_AUTH_TRUSTED_PROXIES` to the IP addresses or CIDR ranges of the reverse proxies in front of the API. The frontend forwards the client IP to preserve per-client rate limits.
 
-Two-factor authentication is enabled by default. For local development only, set `DISABLE_TWO_FACTOR=true` to temporarily let partner accounts sign in without an authenticator code. This disables two-factor enforcement for all accounts while enabled; keep it `false` in shared or production environments.
-
 ## Database setup
 
 The existing application tables (`public.users`, `public.roles`) remain in Neon. Create the Better Auth tables by running:

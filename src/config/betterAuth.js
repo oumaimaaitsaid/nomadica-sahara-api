@@ -18,8 +18,6 @@ async function getAuth() {
             const trustedProxies = (process.env.BETTER_AUTH_TRUSTED_PROXIES || '127.0.0.1,::1')
                 .split(',').map((value) => value.trim()).filter(Boolean);
             const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-            const disableTwoFactor = process.env.DISABLE_TWO_FACTOR === 'true';
-
             return betterAuth({
                 appName: 'Toledano Viajes Partner Portal',
                 baseURL: process.env.BETTER_AUTH_URL || `http://localhost:${process.env.PORT || 5000}`,
@@ -32,7 +30,7 @@ async function getAuth() {
                     database: { generateId: 'uuid' },
                     ipAddress: { ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'], trustedProxies },
                 },
-                plugins: disableTwoFactor ? [] : [twoFactor({ issuer: 'Toledano Viajes' })],
+                plugins: [twoFactor({ issuer: 'Toledano Viajes' })],
             });
         })().catch((error) => {
             authPromise = undefined;
