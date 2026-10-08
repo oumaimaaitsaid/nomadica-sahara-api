@@ -105,24 +105,8 @@ images are optional on create and update.
 Requests are saved with `pending` status. This flow records a booking request;
 it does not confirm availability or collect payment.
 
-Products use `price` for a single-price experience. To expose the existing
-three-tier comparison UI for a product, set its optional `pricing_options`
-JSONB value to this shape; the public API includes it and the frontend reads
-the tiers without using the old local tour mock:
-
-```json
-{
-  "unit": "person",
-  "tiers": {"economic": 40, "standard": 65, "premium": 90},
-  "tierSummary": {
-    "economic": "Basic experience",
-    "standard": "Recommended experience",
-    "premium": "Premium experience"
-  }
-}
-```
-
-Leave `pricing_options` null for a single-price product. No comparison tiers
-are inferred from `price` or `discount`.
+Products use the `price` column for the listed experience. Booking requests
+recalculate totals from this price and the product type; comparison tiers are
+not stored on products.
 
 Existing Neon Managed Auth accounts are not imported. Recreate the partner credential with the seeder; the password is hashed using Better Auth and stored in its `account` table.

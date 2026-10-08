@@ -13,9 +13,9 @@ function validatePayload(input) {
     if (!input || typeof input !== 'object' || !input.form || typeof input.form !== 'object') return null;
     const { offerId, form } = input;
     if (typeof offerId !== 'string' || offerId.length > 240) return null;
-    const match = /^(.*)--(base|economic|standard|premium)$/.exec(offerId);
+    const match = /^(.*)--base$/.exec(offerId);
     if (!match || !match[1]) return null;
-    const [, slug, tier] = match;
+    const [, slug] = match;
     const date = form.date;
     const travelers = Number(form.travelers);
     const name = typeof form.name === 'string' ? form.name.trim() : '';
@@ -31,7 +31,7 @@ function validatePayload(input) {
     if (!/^\+\d{1,4}$/.test(countryCode) || phone.length < 5 || phone.length > 30) return { error: 'phoneRequired' };
     if (form.consent !== true) return { error: 'consentRequired' };
     if (pickup.length > 240 || notes.length > 1000) return { error: 'serverError' };
-    return { slug, tier, date, travelers, name, email, countryCode, phone, pickup, notes };
+    return { slug, tier: 'base', date, travelers, name, email, countryCode, phone, pickup, notes };
 }
 
 async function createBookingRequest(req, res) {
@@ -41,26 +41,15 @@ async function createBookingRequest(req, res) {
 
     try {
         const [product] = await sql`
-            SELECT id, slug, title, price, currency, type, pricing_options
+            SELECT id, slug, title, price, currency, type
             FROM public.products
             WHERE status = 'active' AND lower(slug) = lower(${input.slug})
             LIMIT 1
         `;
         if (!product) return res.status(404).json({ success: false, error: 'serverError' });
 
-        const options = product.pricing_options && typeof product.pricing_options === 'object' ? product.pricing_options : null;
-        const unit = options?.unit || (product.type === 'hotel' ? 'group' : product.type === 'private-tour' ? 'vehicle' : 'person');
-        let unitPrice;
-        if (input.tier === 'base') {
-            if (options?.tiers) return res.status(400).json({ success: false, error: 'serverError' });
-            unitPrice = Number(product.price);
-        } else {
-            const tiers = options?.tiers;
-            if (!tiers || !Number.isFinite(Number(tiers[input.tier])) || Number(tiers[input.tier]) < 0) {
-                return res.status(400).json({ success: false, error: 'serverError' });
-            }
-            unitPrice = Number(tiers[input.tier]);
-        }
+        const unit = product.type === 'hotel' ? 'group' : product.type === 'private-tour' ? 'vehicle' : 'person';
+        const unitPrice = Number(product.price);
         const total = Math.round(unitPrice * (unit === 'person' || unit === 'ticket' ? input.travelers : 1) * 100) / 100;
         const now = new Date();
         const dateStamp = new Intl.DateTimeFormat('en-CA', {timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit'}).format(now).replace(/-/g, '');
